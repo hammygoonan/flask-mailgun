@@ -1,6 +1,12 @@
+"""Adds Mailgun support to Flask applications."""
+
 import requests
 
-class Mailgun(object):
+
+class Mailgun():
+
+    """Interface for Mailgun API."""
+
     app = None
     mailgun_api = None
 
@@ -9,34 +15,54 @@ class Mailgun(object):
             self.init_app(app)
 
     def init_app(self, app):
-        self.mailgun_api = MailgunApi(app.config['MAILGUN_DOMAIN'],
-                app.config['MAILGUN_API_KEY'])
+        """Creating a new :class:`MailgunApi` object."""
+        self.mailgun_api = MailgunApi(
+            app.config['MAILGUN_DOMAIN'],
+            app.config['MAILGUN_API_KEY']
+        )
         self.app = app
 
     def send_email(self, **kwargs):
+        """Send email interface."""
         if not self.mailgun_api:
             raise ValueError('A valid app instance has not been provided')
 
-        default_from = self.app.config.get('MAILGUN_DEFAULT_FROM')
-        if default_from:
-            kwargs.setdefault('from', default_from)
-
         return self.mailgun_api.send_email(**kwargs)
 
-class MailgunApi(object):
+
+class MailgunApi():
+
+    """Mailgun API implentation."""
+
     def __init__(self, domain, api_key):
         self.domain = domain
         self.api_key = api_key
 
-    def send_email(self, **kwargs):
-        response = requests.post(self.endpoint, data=kwargs, auth=self.auth)
+    def send_email(self, data=None, files=None):
+        """Send email useing the Mailgun API.
+
+        :param data: (optional) Dict of values to be sent as 'data'
+        :param files: (optional) List of tuples to send.
+        :return: :class:`Response <Response>` object
+        """
+
+        response = requests.post(self.endpoint, data=data, files=files,
+                                 auth=self.auth)
         response.raise_for_status()
         return response
 
     @property
     def endpoint(self):
-        return 'https://api.mailgun.net/v2/{}/messages'.format(self.domain)
+        """Return endpoint for messages API call.
+
+        :return: string
+        """
+        return 'https://api.mailgun.net/v3/{}/messages'.format(self.domain)
 
     @property
     def auth(self):
+        """Mailgun authentication method.
+
+        :return: set
+        """
         return ('api', self.api_key)
